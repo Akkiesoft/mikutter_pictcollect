@@ -40,61 +40,53 @@ Plugin.create(:mikutter_pictcollect) do
         # スレッド作成
         # ツイートに含まれる画像のURLを取得
         urls = message.entity.select{ |entity| %i<urls media>.include? entity[:slug] }
-        urls.each_with_index { |url, i|
-          saved = nil
+        count = 1
+        urls.each { |url|
           case url[:slug]
           when :media
             # pic.twitter.com
             saveurl  = url[:media_url] + ":orig"
-            activity :pictcollect, "[MEDIA] #{saveurl}"
             savebase = url[:expanded_url]
             savebase =~ %r{http://twitter.com/(.+)/status/(.+)/photo/([0-9]+)}
-            filename = "#{savedir}#{$~[1]}_#{$~[2]}_#{i+1}" + File.extname(url[:media_url])
+            filename = "#{savedir}#{$~[1]}_#{$~[2]}_#{count}" + File.extname(url[:media_url])
+            count += 1
             Thread.new(saveurl) { |saveurl|
               save_file(saveurl, filename)
+              activity :pictcollect, "ほぞんした！！ [MEDIA] #{saveurl} --> #{filename}"
             }
-            saved = 1
           when :urls
             # 他の画像サービス系
-            saveurl = Plugin.filtering(
+            ext = ""
+            save = nil
+            url = Plugin.filtering(
               :openimg_raw_image_from_display_url,
               url[:expanded_url], nil).first.to_s
-            activity :pictcollect, "[URL] #{saveurl}"
-            parseurl = URI.parse(saveurl)
-            if parseurl.host == "pbs.twimg.com"
-              parseurl.path += ":orig"
-              ext="jpg"
-            else
-              response = nil
-              Net::HTTP.start(parseurl.host, parseurl.port) {|http|
-                response = http.head(parseurl.path)
-              }
-              ext = nil
-              case response['content-type']
-              when "image/png"
-                ext = "png"
-              when "image/gif"
-                ext = "gif"
-              when "image/bmp"
-                ext = "bmp"
-              when "image/jpeg"
-                ext = "jpg"
-              end
+
+            saveurl = URI.parse(url)
+            if saveurl.host == "pbs.twimg.com"
+              # ココにtwimgが来る場合もあるので、きたら:origをつける
+              saveurl.path += ":orig"
             end
-			if ext
-              filename = "#{savedir}#{message[:user]}_#{message[:id_str]}_#{i+1}.#{ext}"
+
+            # 画像だったら保存
+            response = nil
+            http = Net::HTTP.new(saveurl.host, saveurl.port)
+            http.use_ssl = true
+            response = http.head(saveurl.path)
+            if response['content-type'].index("image")
+              ext = response['content-type'].split("/")[1]
+
+              filename = "#{savedir}#{message[:user]}_#{message[:id_str]}_#{count}.#{ext}"
+              count += 1
               Thread.new(saveurl) { |saveurl|
                 save_file(saveurl, filename)
+                activity :pictcollect, "ほぞんした！！ [URL] #{saveurl} --> #{filename}"
               }
-              saved = 1
-            else
-              activity :pictcollect, "skip #{saveurl}"
+#            else
+#              activity :pictcollect, "skip #{saveurl} (Content-Type: #{response['content-type']})"
             end
-          else
-            activity :pictcollect, "Unknown type"
-          end
-          if saved
-            activity :pictcollect, "ほぞんした！！ #{filename}"
+#          else
+#            activity :pictcollect, "Unknown type"
           end
         }
       }
