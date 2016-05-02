@@ -3,6 +3,8 @@
 require "open-uri"
 require "FileUtils"
 require "image_size"
+require 'net/http'
+require 'uri'
 
 # From http://d.hatena.ne.jp/gan2/20080531/1212227507
 def save_file(url, filename)
@@ -39,11 +41,12 @@ Plugin.create(:mikutter_pictcollect) do
         # ツイートに含まれる画像のURLを取得
         urls = message.entity.select{ |entity| %i<urls media>.include? entity[:slug] }
         urls.each_with_index { |url, i|
-          saved = 0
+          saved = nil
           case url[:slug]
           when :media
             # pic.twitter.com
             saveurl  = url[:media_url] + ":orig"
+            activity :pictcollect, "[MEDIA] #{saveurl}"
             savebase = url[:expanded_url]
             savebase =~ %r{http://twitter.com/(.+)/status/(.+)/photo/([0-9]+)}
             filename = "#{savedir}#{$~[1]}_#{$~[2]}_#{i+1}" + File.extname(url[:media_url])
@@ -53,27 +56,42 @@ Plugin.create(:mikutter_pictcollect) do
             saved = 1
           when :urls
             # 他の画像サービス系
-            pair = Plugin.filtering(:openimg_raw_image_from_display_url, url[:expanded_url], nil)
-            _, stream = *pair
-puts stream
-            saveurl = stream.path
-			image = ImageSize.new(stream.read)
-			print "[" + image.format + "]"
-			case image.format
-			  when "png"
-			    ext = "png"
-			  when "gif"
-			    ext = "gif"
-			  when "bmp"
-			    ext = "bmp"
-			  else
+            saveurl = Plugin.filtering(
+              :openimg_raw_image_from_display_url,
+              url[:expanded_url], nil).first.to_s
+            activity :pictcollect, "[URL] #{saveurl}"
+            parseurl = URI.parse(saveurl)
+            if parseurl.host == "pbs.twimg.com"
+              parseurl.path += ":orig"
+              ext="jpg"
+            else
+              response = nil
+              Net::HTTP.start(parseurl.host, parseurl.port) {|http|
+                response = http.head(parseurl.path)
+              }
+              ext = nil
+              case response['content-type']
+              when "image/png"
+                ext = "png"
+              when "image/gif"
+                ext = "gif"
+              when "image/bmp"
+                ext = "bmp"
+              when "image/jpeg"
                 ext = "jpg"
-			end
-            filename = "#{savedir}#{message[:user]}_#{message[:id_str]}_#{i+1}.#{ext}"
-puts saveurl+"\n"
-puts filename+"\n"
-            FileUtils.cp(saveurl, filename)
-            saved = 1
+              end
+            end
+			if ext
+              filename = "#{savedir}#{message[:user]}_#{message[:id_str]}_#{i+1}.#{ext}"
+              Thread.new(saveurl) { |saveurl|
+                save_file(saveurl, filename)
+              }
+              saved = 1
+            else
+              activity :pictcollect, "skip #{saveurl}"
+            end
+          else
+            activity :pictcollect, "Unknown type"
           end
           if saved
             activity :pictcollect, "ほぞんした！！ #{filename}"
