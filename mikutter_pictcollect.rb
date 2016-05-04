@@ -84,7 +84,7 @@ Plugin.create(:mikutter_pictcollect) do
 
   command(
     :mikutter_pictcollect,
-    name: '画像をコレクションする',
+    name: '画像をこれくしょんする',
     condition: lambda{ |opt| true },
     visible: true,
     role: :timeline
@@ -99,6 +99,31 @@ Plugin.create(:mikutter_pictcollect) do
     rescue => msg
       activity :pictcollect, msg.to_s
     end
+  end
+
+  command(:bulk_collect,
+    name: 'まとめて画像これくしょん',
+    condition: lambda{ |opt| true },
+    visible: true,
+    role: :postbox
+  ) do |opt|
+    savedir = get_savedir()
+    next if (! savedir)
+
+    urls = Plugin[:gtk].widgetof(opt.widget).widget_post.buffer.text
+    Plugin[:gtk].widgetof(opt.widget).widget_post.buffer.text = ""
+    urls.each_line { |url|
+      # osa_kさんのshow_tweetを参考にした
+      if id = url.match(/\d+$/)
+        Thread.new{
+          Message.findbyid(id[0].to_i)
+        }.next {|message|
+          pictcollect(message, savedir)
+        }.terminate {|e|
+          activity :pictcollect, "このツイートはこれくしょんできませんでした #{url} -> #{e.to_s}"
+        }
+      end
+    }
   end
 
   settings "画像これくしょん" do

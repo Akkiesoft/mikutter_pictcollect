@@ -15,8 +15,13 @@
 4. 画像ツイートを選択してショートカットを実行
 5. これであなたも爽やかておくれライフ
 
+## まとめて画像これくしょん
+
+Postboxに改行区切りでツイートのURL(もしくはツイートID)を入力して「まとめて画像これくしょん」コマンドを実行すると、ツイートの画像をまとめて保存できます。
+
 ## 参考にしたりパクったりした
 
 このプラグインはmogunoさんの[mikutter-sub-parts-image][subparts-image]からだいたいパクりました。
+その他のパクリどころはコメントで書いてます。感謝。
 
 [subparts-image]: https://github.com/moguno/mikutter-subparts-image
