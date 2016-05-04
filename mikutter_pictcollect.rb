@@ -6,13 +6,35 @@ require "image_size"
 require 'net/http'
 require 'uri'
 
-# From http://d.hatena.ne.jp/gan2/20080531/1212227507
-def save_file(url, filename)
-  open(filename, 'wb') do |file|
-    open(url) do |data|
-      file.write(data.read)
+
+def get_savedir(pictcollect)
+  savedir = UserConfig[:collect_savedir]
+  if (FileTest.exist?(savedir))
+    # 保存先ディレクトリの取得と必要に応じて/の補完
+    if savedir !=~ /\/$/
+      return savedir + "/"
     end
+  else
+    activity :pictcollect, "先に保存先ディレクトリを指定してください"
+    return nil
   end
+end
+
+def get_filename_for_twimg(url, savedir, count)
+  url[:expanded_url] =~ %r{http://twitter.com/(.+)/status/(.+)/photo/([0-9]+)}
+  return "#{savedir}#{$~[1]}_#{$~[2]}_#{count}" + File.extname(url[:media_url])
+end
+
+# From http://d.hatena.ne.jp/gan2/20080531/1212227507
+def save_file(url, filename, pictcollect)
+  Thread.new(url) { |url|
+    open(filename, 'wb') do |file|
+      open(url) do |data|
+        file.write(data.read)
+      end
+    end
+    activity :pictcollect, "ほぞんした！！ #{url} --> #{filename}"
+  }
 end
 
 Plugin.create(:mikutter_pictcollect) do
@@ -26,14 +48,8 @@ Plugin.create(:mikutter_pictcollect) do
           role: :timeline
   ) do |opt|
     begin
-      savedir = UserConfig[:collect_savedir]
-      if (! FileTest.exist?(savedir))
-        raise "設定されているディレクトリが存在しません"
-      end
-      # 保存先ディレクトリの取得と必要に応じて/の補完
-      if savedir !=~ /\/$/
-        savedir = savedir + "/"
-      end
+      savedir = get_savedir(:pictcollect)
+      if (! savedir) break end
 
       # 選択されたツイートに対してそれぞれ実行
       opt.messages.each { |message|
@@ -46,14 +62,9 @@ Plugin.create(:mikutter_pictcollect) do
           when :media
             # pic.twitter.com
             saveurl  = url[:media_url] + ":orig"
-            savebase = url[:expanded_url]
-            savebase =~ %r{http://twitter.com/(.+)/status/(.+)/photo/([0-9]+)}
-            filename = "#{savedir}#{$~[1]}_#{$~[2]}_#{count}" + File.extname(url[:media_url])
+            filename = get_filename_for_twimg(url, savedir, count)
             count += 1
-            Thread.new(saveurl) { |saveurl|
-              save_file(saveurl, filename)
-              activity :pictcollect, "ほぞんした！！ [MEDIA] #{saveurl} --> #{filename}"
-            }
+            save_file(saveurl, filename, :pictcollect)
           when :urls
             # 他の画像サービス系
             ext = ""
@@ -78,10 +89,7 @@ Plugin.create(:mikutter_pictcollect) do
 
               filename = "#{savedir}#{message[:user]}_#{message[:id_str]}_#{count}.#{ext}"
               count += 1
-              Thread.new(saveurl) { |saveurl|
-                save_file(saveurl, filename)
-                activity :pictcollect, "ほぞんした！！ [URL] #{saveurl} --> #{filename}"
-              }
+              save_file(saveurl, filename, :pictcollect)
 #            else
 #              activity :pictcollect, "skip #{saveurl} (Content-Type: #{response['content-type']})"
             end
