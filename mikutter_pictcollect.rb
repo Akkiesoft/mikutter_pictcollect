@@ -1,11 +1,8 @@
 # 画像これくしょん(mikutter3.2以降)
 
 require "open-uri"
-require "FileUtils"
-require "image_size"
 require 'net/http'
 require 'uri'
-
 
 def get_savedir(pictcollect)
   savedir = UserConfig[:collect_savedir]
