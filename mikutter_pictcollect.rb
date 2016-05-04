@@ -11,9 +11,7 @@ Plugin.create(:mikutter_pictcollect) do
     savedir = UserConfig[:collect_savedir]
     if (FileTest.exist?(savedir))
       # 保存先ディレクトリの取得と必要に応じて/の補完
-      if savedir !=~ /\/$/
-        return savedir + "/"
-      end
+      return savedir + "/" if savedir !=~ /\/$/
     else
       activity :pictcollect, "先に保存先ディレクトリを指定してください"
       return nil
@@ -60,6 +58,8 @@ Plugin.create(:mikutter_pictcollect) do
     urls = message.entity.select{ |entity|
       %i<urls media>.include? entity[:slug]
     }
+    # ユーザーごとにディレクトリを掘る場合
+    savedir += "#{message[:user]}/" if :collect_mkdir_by_account
     count = 1
     urls.each { |url|
       case url[:slug]
@@ -77,6 +77,9 @@ Plugin.create(:mikutter_pictcollect) do
       end
       if filename
         count += 1
+        if (:collect_mkdir_by_account && ! Dir.exist?(savedir) )
+          Dir.mkdir(savedir, 0755)
+        end
         save_file(saveurl, filename)
       end
     }
@@ -91,7 +94,7 @@ Plugin.create(:mikutter_pictcollect) do
   ) do |opt|
     begin
       savedir = get_savedir()
-      next if (! savedir)
+      next unless (savedir)
       # 選択されたツイートに対してそれぞれ実行
       opt.messages.each { |message|
         pictcollect(message, savedir)
@@ -108,7 +111,7 @@ Plugin.create(:mikutter_pictcollect) do
     role: :postbox
   ) do |opt|
     savedir = get_savedir()
-    next if (! savedir)
+    next unless (savedir)
 
     urls = Plugin[:gtk].widgetof(opt.widget).widget_post.buffer.text
     Plugin[:gtk].widgetof(opt.widget).widget_post.buffer.text = ""
@@ -128,6 +131,7 @@ Plugin.create(:mikutter_pictcollect) do
 
   settings "画像これくしょん" do
     input("画像を保存するディレクトリ", :collect_savedir)
+    boolean('アカウントごとにディレクトリを作成', :collect_mkdir_by_account)
   end
 
 end

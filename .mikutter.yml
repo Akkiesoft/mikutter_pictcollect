@@ -6,7 +6,7 @@ depends:
   - command
   - settings
   - openimg
-version: '0.4'
+version: '0.41'
 author: Akkiesoft
 name: mikutter_pictcollect
 description: ツイートの画像を特定の場所に保存するプラグイン
