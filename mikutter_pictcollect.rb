@@ -19,7 +19,7 @@ Plugin.create(:mikutter_pictcollect) do
   end
 
   def get_filename_for_twimg(url, savedir, count)
-    url[:expanded_url] =~ %r{http://twitter.com/(.+)/status/(.+)/photo/([0-9]+)}
+    url[:expanded_url] =~ %r{https?://twitter.com/(.+)/status/(.+)/photo/([0-9]+)}
     return "#{savedir}#{$~[1]}_#{$~[2]}_#{count}" + File.extname(url[:media_url])
   end
 
