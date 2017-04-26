@@ -44,12 +44,16 @@ Plugin.create(:mikutter_pictcollect) do
   # From http://d.hatena.ne.jp/gan2/20080531/1212227507
   def save_file(url, filename)
     Thread.new(url) { |url|
-      open(filename, 'wb') do |file|
-        open(url) do |data|
-          file.write(data.read)
+      if File.exist?(filename)
+        activity :pictcollect, "もうある #{filename}"
+      else
+        open(filename, 'wb') do |file|
+          open(url) do |data|
+            file.write(data.read)
+          end
         end
+        activity :pictcollect, "ほぞんした！！ #{url} --> #{filename}"
       end
-      activity :pictcollect, "ほぞんした！！ #{url} --> #{filename}"
     }
   end
 
