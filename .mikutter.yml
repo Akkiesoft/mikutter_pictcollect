@@ -1,4 +1,4 @@
-slug: :mikutter_pictcollect
+slug: :pictcollect
 depends:
   mikutter: '3.2'
   plugin:
@@ -6,7 +6,7 @@ depends:
   - command
   - settings
   - openimg
-version: '0.41'
+version: '0.43'
 author: Akkiesoft
-name: mikutter_pictcollect
+name: pictcollect
 description: ツイートの画像を特定の場所に保存するプラグイン

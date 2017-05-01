@@ -7,6 +7,12 @@
 + twitterにアップロードされた画像をオリジナルサイズ(:orig)で保存
 + 画像の拡張子が付いている別のドメインの画像も保存を試みる
 
+## インストール
+
+```
+$ mkdir -p ~/.mikutter/plugin/pictcollect; git clone https://github.com/Akkiesoft/mikutter_pictcollect ~/mikutter/plugin/pictcollect
+```
+
 ## つかいかた
 
 1. プラグインをインストロールします
