@@ -4,7 +4,7 @@ require "open-uri"
 require 'net/http'
 require 'uri'
 
-Plugin.create(:mikutter_pictcollect) do
+Plugin.create(:pictcollect) do
   defactivity "pictcollect", "画像これくしょん"
 
   def get_savedir()
@@ -16,29 +16,6 @@ Plugin.create(:mikutter_pictcollect) do
       activity :pictcollect, "先に保存先ディレクトリを指定してください"
       return nil
     end
-  end
-
-  def get_filename_for_twimg(url, savedir, count)
-    url[:expanded_url] =~ %r{https?://twitter.com/(.+)/status/(.+)/photo/([0-9]+)}
-    return "#{savedir}#{$~[1]}_#{$~[2]}_#{count}" + File.extname(url[:media_url])
-  end
-
-  def get_filename_for_url(message, url, savedir, count)
-    saveurl = URI.parse(url)
-    if saveurl.host == "pbs.twimg.com"
-      # ココにtwimgが来る場合もあるので、きたら:origをつける
-      saveurl.path += ":orig"
-    end
-    http = Net::HTTP.new(saveurl.host, saveurl.port)
-    http.use_ssl = saveurl.scheme.include?("https")
-    response = http.head(saveurl.path)
-    if response['content-type'].include?("image")
-      ext = response['content-type'].split("/")[1]
-      filename = "#{savedir}#{message[:user]}_#{message[:id_str]}_#{count}.#{ext}"
-    else
-      filename = nil
-    end
-    return saveurl, filename
   end
 
   # From http://d.hatena.ne.jp/gan2/20080531/1212227507
@@ -57,6 +34,38 @@ Plugin.create(:mikutter_pictcollect) do
     }
   end
 
+  def collect_twitter(message, url, savedir, count)
+    case url[:slug]
+    when :media
+      # twimg.com
+      saveurl = url[:media_url] + ":orig"
+      url[:expanded_url] =~ %r{https?://twitter.com/(.+)/status/(.+)/photo/([0-9]+)}
+      filename = "#{savedir}#{$~[1]}_#{$~[2]}_#{count}" + File.extname(url[:media_url])
+    when :urls
+      # 他のURLとか
+      url = Plugin.filtering(
+        :openimg_raw_image_from_display_url,
+        url[:expanded_url], nil).first.to_s
+      saveurl = URI.parse(url)
+      filename = nil
+      # pathがないURLはほぼ画像ではないだろう
+      if saveurl.path != ""
+        if saveurl.host == "pbs.twimg.com"
+          # ココにtwimgが来る場合もあるので、きたら:origをつける
+          saveurl.path += ":orig"
+        end
+        http = Net::HTTP.new(saveurl.host, saveurl.port)
+        http.use_ssl = saveurl.scheme.include?("https")
+        response = http.head(saveurl.path)
+        if response['content-type'].include?("image")
+          ext = response['content-type'].split("/")[1]
+          filename = "#{savedir}#{message[:user]}_#{message[:id_str]}_#{count}.#{ext}"
+        end
+      end
+    end
+    return saveurl, filename
+  end
+
   def pictcollect(message, savedir)
     # ツイートに含まれる画像のURLを取得
     urls = message.entity.select{ |entity|
@@ -66,19 +75,12 @@ Plugin.create(:mikutter_pictcollect) do
     savedir += "#{message[:user]}/" if :collect_mkdir_by_account
     count = 1
     urls.each { |url|
-      case url[:slug]
-      when :media
-        # twimg.com
-        saveurl  = url[:media_url] + ":orig"
-        filename = get_filename_for_twimg(url, savedir, count)
-      when :urls
-        # 他のURLとか
-        url = Plugin.filtering(
-          :openimg_raw_image_from_display_url,
-          url[:expanded_url], nil).first.to_s
-        saveurl, filename = get_filename_for_url(
-          message, url, savedir, count)
+    puts url
+      # Twitter world
+      if url[:from] == :twitter
+        saveurl, filename = collect_twitter(message, url, savedir, count)
       end
+
       if filename
         count += 1
         if (:collect_mkdir_by_account && ! Dir.exist?(savedir) )
@@ -90,7 +92,7 @@ Plugin.create(:mikutter_pictcollect) do
   end
 
   command(
-    :mikutter_pictcollect,
+    :pictcollect,
     name: '画像をこれくしょんする',
     condition: lambda{ |opt| true },
     visible: true,

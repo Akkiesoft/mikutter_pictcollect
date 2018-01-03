@@ -1,12 +1,12 @@
 slug: :pictcollect
 depends:
-  mikutter: '3.2'
+  mikutter: '3.6'
   plugin:
   - gtk
   - command
   - settings
   - openimg
-version: '0.43'
+version: '0.5'
 author: Akkiesoft
 name: pictcollect
 description: ツイートの画像を特定の場所に保存するプラグイン
