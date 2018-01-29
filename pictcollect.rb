@@ -34,7 +34,7 @@ Plugin.create(:pictcollect) do
     }
   end
 
-  def collect_twitter(message, url, savedir, count)
+  def get_path(message, url, savedir, count)
     case url[:slug]
     when :media
       # twimg.com
@@ -76,10 +76,7 @@ Plugin.create(:pictcollect) do
     count = 1
     urls.each { |url|
     puts url
-      # Twitter world
-      if url[:from] == :twitter
-        saveurl, filename = collect_twitter(message, url, savedir, count)
-      end
+      saveurl, filename = get_path(message, url, savedir, count)
 
       if filename
         count += 1
