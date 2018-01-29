@@ -34,13 +34,13 @@ Plugin.create(:pictcollect) do
     }
   end
 
-  def get_path(message, url, savedir, count)
+  def get_path(message, url, count)
     case url[:slug]
     when :media
       # twimg.com
       saveurl = url[:media_url] + ":orig"
       url[:expanded_url] =~ %r{https?://twitter.com/(.+)/status/(.+)/photo/([0-9]+)}
-      filename = "#{savedir}#{$~[1]}_#{$~[2]}_#{count}" + File.extname(url[:media_url])
+      filename = "#{$~[1]}_#{$~[2]}_#{count}" + File.extname(url[:media_url])
     when :urls
       # 他のURLとか
       url = Plugin.filtering(
@@ -59,7 +59,7 @@ Plugin.create(:pictcollect) do
         response = http.head(saveurl.path)
         if response['content-type'].include?("image")
           ext = response['content-type'].split("/")[1]
-          filename = "#{savedir}#{message[:user]}_#{message[:id_str]}_#{count}.#{ext}"
+          filename = "#{message[:user]}_#{message[:id_str]}_#{count}.#{ext}"
         end
       end
     end
@@ -71,19 +71,19 @@ Plugin.create(:pictcollect) do
     urls = message.entity.select{ |entity|
       %i<urls media>.include? entity[:slug]
     }
-    # ユーザーごとにディレクトリを掘る場合
-    savedir += "#{message[:user]}/" if :collect_mkdir_by_account
     count = 1
     urls.each { |url|
-    puts url
-      saveurl, filename = get_path(message, url, savedir, count)
-
+      saveurl, filename = get_path(message, url, count)
       if filename
-        count += 1
-        if (:collect_mkdir_by_account && ! Dir.exist?(savedir) )
-          Dir.mkdir(savedir, 0755)
+        # ユーザーごとにディレクトリを掘る場合
+        if (:collect_mkdir_by_account)
+          savedir += "#{message[:user]}/"
+          if (! Dir.exist?(savedir))
+            Dir.mkdir(savedir, 0755)
+          end
         end
-        save_file(saveurl, filename)
+        count += 1
+        save_file(saveurl, savedir + filename)
       end
     }
   end
