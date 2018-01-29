@@ -3,6 +3,7 @@
 require "open-uri"
 require 'net/http'
 require 'uri'
+require 'fileutils'
 
 Plugin.create(:pictcollect) do
   defactivity "pictcollect", "画像これくしょん"
@@ -41,6 +42,11 @@ Plugin.create(:pictcollect) do
       saveurl = url[:media_url] + ":orig"
       url[:expanded_url] =~ %r{https?://twitter.com/(.+)/status/(.+)/photo/([0-9]+)}
       filename = "#{$~[1]}_#{$~[2]}_#{count}" + File.extname(url[:media_url])
+    when :hatenafotolife
+      # はてなフォトライフ(haiku plugin)
+      saveurl = url[:expanded_url]
+      url[:url] =~ %r{https?://f.hatena.ne.jp/(.+)/([0-9]+)}
+      filename = "#{$~[1]}_#{$~[2]}" + File.extname(url[:expanded_url])
     when :urls
       # 他のURLとか
       url = Plugin.filtering(
@@ -69,7 +75,7 @@ Plugin.create(:pictcollect) do
   def pictcollect(message, savedir)
     # ツイートに含まれる画像のURLを取得
     urls = message.entity.select{ |entity|
-      %i<urls media>.include? entity[:slug]
+      %i<urls media hatenafotolife>.include? entity[:slug]
     }
     count = 1
     urls.each { |url|
@@ -77,9 +83,12 @@ Plugin.create(:pictcollect) do
       if filename
         # ユーザーごとにディレクトリを掘る場合
         if (:collect_mkdir_by_account)
+          if (url[:slug] == :hatenafotolife)
+            savedir += "!hatenahaiku/"
+          end
           savedir += "#{message[:user]}/"
           if (! Dir.exist?(savedir))
-            Dir.mkdir(savedir, 0755)
+            FileUtils.mkdir_p(savedir)
           end
         end
         count += 1
