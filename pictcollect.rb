@@ -81,18 +81,19 @@ Plugin.create(:pictcollect) do
     urls.each { |url|
       saveurl, filename = get_path(message, url, count)
       if filename
+        savedir_usr = ""
         # ユーザーごとにディレクトリを掘る場合
         if (:collect_mkdir_by_account)
           if (url[:slug] == :hatenafotolife)
-            savedir += "!hatenahaiku/"
+            savedir_usr = "!hatenahaiku/"
           end
-          savedir += "#{message[:user]}/"
-          if (! Dir.exist?(savedir))
-            FileUtils.mkdir_p(savedir)
+          savedir_usr = "#{message[:user]}/"
+          if (! Dir.exist?(savedir + savedir_usr))
+            FileUtils.mkdir_p(savedir + savedir_usr)
           end
         end
         count += 1
-        save_file(saveurl, savedir + filename)
+        save_file(saveurl, savedir + savedir_usr + filename)
       end
     }
   end
