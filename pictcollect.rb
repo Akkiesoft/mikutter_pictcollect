@@ -35,59 +35,49 @@ Plugin.create(:pictcollect) do
     }
   end
 
-  def get_path(message, url, count)
-    case url[:slug]
-    when :media
-      # twimg.com
-      saveurl = url[:media_url] + ":orig"
-      url[:expanded_url] =~ %r{https?://twitter.com/(.+)/status/(.+)/photo/([0-9]+)}
-      filename = "#{$~[1]}_#{$~[2]}_#{count}" + File.extname(url[:media_url])
-    when :hatenafotolife
-      # はてなフォトライフ(haiku plugin)
-      saveurl = url[:expanded_url]
-      url[:url] =~ %r{https?://f.hatena.ne.jp/(.+)/([0-9]+)}
-      filename = "#{$~[1]}_#{$~[2]}" + File.extname(url[:expanded_url])
-    when :urls
-      # 他のURLとか
-      url = Plugin.filtering(
-        :openimg_raw_image_from_display_url,
-        url[:expanded_url], nil).first.to_s
-      saveurl = URI.parse(url)
-      filename = nil
-      # pathがないURLはほぼ画像ではないだろう
-      if saveurl.path != ""
-        if saveurl.host == "pbs.twimg.com"
-          # ココにtwimgが来る場合もあるので、きたら:origをつける
-          saveurl.path += ":orig"
-        end
-        http = Net::HTTP.new(saveurl.host, saveurl.port)
-        http.use_ssl = saveurl.scheme.include?("https")
-        response = http.head(saveurl.path)
-        if response['content-type'].include?("image")
-          ext = response['content-type'].split("/")[1]
-          filename = "#{message[:user]}_#{message[:id_str]}_#{count}.#{ext}"
-        end
-      end
-    end
-    return saveurl, filename
-  end
-
   def pictcollect(message, savedir)
     # ツイートに含まれる画像のURLを取得
-    urls = message.entity.select{ |entity|
-      %i<urls media hatenafotolife>.include? entity[:slug]
-    }
+    if (Plugin.instance_exist?(:score))
+      # 3.7以降 
+      urls = Plugin[:"pictcollect"].score_of(message).map(&:uri)
+    else
+      # 3.6以前
+      urls = message.entity.select{ |entity|
+        %i<urls media hatenafotolife>.include? entity[:slug]
+      }
+    end
+
     count = 1
-    urls.each { |url|
-      saveurl, filename = get_path(message, url, count)
+    urls.map{ |url|
+      Plugin.filtering(:openimg_raw_image_from_display_url, url.to_s, nil)
+    }.select{ |pair| pair.last }.map(&:first).each{ |url|
+      savedir_world = ""
+      username = ""
+      photo = Enumerator.new{ |y| Plugin.filtering(:photo_filter, url, y) }.first
+
+      case message.class.slug
+      when :twitter_tweet
+        saveurl = photo[:original].uri.to_s
+        filename = [message[:user][:idname], message[:id].to_s, count].join("_") + File.extname(url)
+        username = message[:user][:idname]
+      when :hatenahaiku_entry
+        # TBD
+        savedir_world = "!hatenahaiku/"
+      when :worldon_status
+        saveurl = photo[:original].uri.to_s
+        filename = [message[:account][:acct], message[:id].to_s, count].join("_") + File.extname(url)
+        username = message[:account][:acct]
+        savedir_world = "!mastodon/"
+      else
+        activity :pictcollect, "未対応のWorldです"
+        return
+      end
+
       if filename
         savedir_usr = ""
         # ユーザーごとにディレクトリを掘る場合
         if (:collect_mkdir_by_account)
-          if (url[:slug] == :hatenafotolife)
-            savedir_usr = "!hatenahaiku/"
-          end
-          savedir_usr = "#{message[:user]}/"
+          savedir_usr = savedir_world + username + "/"
           if (! Dir.exist?(savedir + savedir_usr))
             FileUtils.mkdir_p(savedir + savedir_usr)
           end
