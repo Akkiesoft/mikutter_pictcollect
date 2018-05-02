@@ -1,4 +1,4 @@
-# 画像これくしょん(mikutter3.2以降)
+# 画像これくしょん(mikutter3.6以降)
 
 require "open-uri"
 require 'net/http'
@@ -37,13 +37,21 @@ Plugin.create(:pictcollect) do
 
   def pictcollect(message, savedir)
     # ツイートに含まれる画像のURLを取得
+    old = false
     if (Plugin.instance_exist?(:score))
       # 3.7以降 
       urls = Plugin[:"pictcollect"].score_of(message).map(&:uri)
     else
-      # 3.6以前
+      # 3.6
+      old = true
       urls = message.entity.select{ |entity|
         %i<urls media hatenafotolife>.include? entity[:slug]
+      }.map{ |url|
+        if url[:slug] == :media
+          url[:media_url]
+        else
+          url[:expanded_url]
+        end
       }
     end
 
@@ -54,14 +62,16 @@ Plugin.create(:pictcollect) do
       savedir_world = ""
       username = ""
       photo = Enumerator.new{ |y| Plugin.filtering(:photo_filter, url, y) }.first
-
       case message.class.slug
       when :twitter_tweet
-        saveurl = photo[:original].uri.to_s
+        saveurl = (old) ? photo.uri.to_s+":orig" : photo[:original].uri.to_s
         filename = [message[:user][:idname], message[:id].to_s, count].join("_") + File.extname(url)
         username = message[:user][:idname]
       when :hatenahaiku_entry
-        # TBD
+        # 3.7 TBD
+        saveurl = (old) ? photo.uri.to_s : ""
+        filename = [message[:user][:idname], message[:id].to_s, count].join("_") + File.extname(url)
+        username = message[:user][:idname]
         savedir_world = "!hatenahaiku/"
       when :worldon_status
         saveurl = photo[:original].uri.to_s
