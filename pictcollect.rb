@@ -49,7 +49,7 @@ Plugin.create(:pictcollect) do
         # フォトライフ記法は画像URLに変換してやる(Worldは問わないことにした)
         if url.description =~ %r{f:id:([-_a-zA-Z0-9]+):([0-9]{8})([0-9]{6})(j|g|p|f)?(:image|:movie)?}
           "https://cdn-ak.f.st-hatena.com/images/fotolife/#{$~[1][0]}/#{$~[1]}/#{$~[2]}/#{$~[2]}#{$~[3]}.#{ext[$~[4]]}"
-        else url end
+        else url.uri end
       }
     else
       # 3.6
