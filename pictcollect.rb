@@ -36,11 +36,21 @@ Plugin.create(:pictcollect) do
   end
 
   def pictcollect(message, savedir)
+    ext = {
+      "j" => "jpg",
+      "p" => "png",
+      "g" => "gif"
+    }
     # ツイートに含まれる画像のURLを取得
     old = false
     if (Plugin.instance_exist?(:score))
-      # 3.7以降 
-      urls = Plugin[:"pictcollect"].score_of(message).map(&:uri)
+      # 3.7以降
+      urls = Plugin[:"pictcollect"].score_of(message).map{|url|
+        # フォトライフ記法は画像URLに変換してやる(Worldは問わないことにした)
+        if url.description =~ %r{f:id:([-_a-zA-Z0-9]+):([0-9]{8})([0-9]{6})(j|g|p|f)?(:image|:movie)?}
+          "https://cdn-ak.f.st-hatena.com/images/fotolife/#{$~[1][0]}/#{$~[1]}/#{$~[2]}/#{$~[2]}#{$~[3]}.#{ext[$~[4]]}"
+        else url end
+      }
     else
       # 3.6
       old = true
@@ -68,8 +78,8 @@ Plugin.create(:pictcollect) do
         filename = [message[:user][:idname], message[:id].to_s, count].join("_") + File.extname(url)
         username = message[:user][:idname]
       when :hatenahaiku_entry
-        # 3.7 TBD
-        saveurl = (old) ? photo.uri.to_s : ""
+        saveurl = photo.uri.to_s
+        # TODO: 本当はフォトライフだったらフォトライフのIDを使いたい
         filename = [message[:user][:idname], message[:id].to_s, count].join("_") + File.extname(url)
         username = message[:user][:idname]
         savedir_world = "!hatenahaiku/"
