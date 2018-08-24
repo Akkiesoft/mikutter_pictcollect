@@ -138,17 +138,24 @@ Plugin.create(:pictcollect) do
 
     urls = Plugin[:gtk].widgetof(opt.widget).widget_post.buffer.text
     Plugin[:gtk].widgetof(opt.widget).widget_post.buffer.text = ""
-    urls.each_line { |url|
-      # osa_kさんのshow_tweetを参考にした
-      if id = url.match(/\d+$/)
-        Thread.new{
-          Message.findbyid(id[0].to_i)
-        }.next {|message|
+    urls.each_line(chomp: true) { |url|
+      # 金具さんのshow_tweetをパクった
+      # https://github.com/cobodo/show_tweet/blob/req/any-model/show_tweet.rb
+      diva_url = Diva::URI.new(url)
+      model_class = Enumerator.new { |y|
+        Plugin.filtering(:model_of_uri, diva_url, y)
+      }.lazy.map{ |model_slug|
+        Diva::Model(model_slug)
+      }.find{ |mc|
+        mc.spec.timeline
+      }
+      Delayer.Deferred.new{
+        model_class.find_by_uri(diva_url)
+      }.next{ |message|
           pictcollect(message, savedir)
-        }.terminate {|e|
+      }.terminate {|e|
           activity :pictcollect, "このツイートはこれくしょんできませんでした #{url} -> #{e.to_s}"
-        }
-      end
+      }
     }
   end
 
