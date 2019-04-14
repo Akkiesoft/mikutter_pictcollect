@@ -42,8 +42,9 @@ Plugin.create(:pictcollect) do
   end
 
   # From http://d.hatena.ne.jp/gan2/20080531/1212227507
-  def save_file(url, filename)
-    Thread.new(url) { |url|
+  def save_file(md5, url, filename)
+    ret = Thread.new(url) { |url|
+      saved = nil
       if File.exist?(filename)
         activity :pictcollect, "もうある #{filename}"
       else
@@ -52,6 +53,7 @@ Plugin.create(:pictcollect) do
             file.write(data.read)
           end
         end
+        saved = 1
         # 拡張子を含まない場合は調べて付加する
         if (File.extname(filename) !~ /\.(jpg|jpeg|png|gif|mp4)$/ )
           old = filename
@@ -59,14 +61,25 @@ Plugin.create(:pictcollect) do
           if File.exist?(filename)
             File.delete(old)
             activity :pictcollect, "もうある #{filename}"
-            return
+            saved = nil
           else
             File.rename(old, filename)
           end
         end
-        activity :pictcollect, "ほぞんした！！ #{url} --> #{filename}"
+      end
+      # check duplicate file
+      m = Digest::MD5.file(filename)
+      if (md5.include?(m))
+        File.delete(filename)
+        "duplicated"
+      else
+        if saved
+          activity :pictcollect, "ほぞんした！！ #{url} --> #{filename}"
+        end
+        m
       end
     }
+    return ret.value
   end
 
   def pictcollect(message, savedir)
@@ -100,6 +113,7 @@ Plugin.create(:pictcollect) do
     end
 
     count = 1
+    md5 = []
     urls.map{ |url|
       Plugin.filtering(:openimg_raw_image_from_display_url, url.to_s, nil)
     }.select{ |pair| pair.last }.map(&:first).each{ |url|
@@ -133,7 +147,13 @@ Plugin.create(:pictcollect) do
           end
         end
         count += 1
-        save_file(saveurl, savedir + savedir_usr + filename)
+        savepath = savedir + savedir_usr + filename
+        m = save_file(md5, saveurl, savepath)
+        if m == "duplicated"
+          count -= 1
+        elsif m
+          md5.push(m)
+        end
       end
     }
   end
