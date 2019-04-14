@@ -77,12 +77,6 @@ Plugin.create(:pictcollect) do
         saveurl = (old) ? photo.uri.to_s+":orig" : photo[:original].uri.to_s
         filename = [message[:user][:idname], message[:id].to_s, count].join("_") + File.extname(url)
         username = message[:user][:idname]
-      when :hatenahaiku_entry
-        saveurl = photo.uri.to_s
-        # TODO: 本当はフォトライフだったらフォトライフのIDを使いたい
-        filename = [message[:user][:idname], message[:id].to_s, count].join("_") + File.extname(url)
-        username = message[:user][:idname]
-        savedir_world = "!hatenahaiku/"
       when :worldon_status
         saveurl = photo[:original].uri.to_s
         filename = [message[:account][:acct], message[:id].to_s, count].join("_") + File.extname(url)
