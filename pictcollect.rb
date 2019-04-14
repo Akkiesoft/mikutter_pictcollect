@@ -19,6 +19,28 @@ Plugin.create(:pictcollect) do
     end
   end
 
+  # From https://morizyun.github.io/ruby/tips-image-type-check-png-jpeg-gif.html
+  def image_type(file_path)
+    File.open(file_path, 'rb') do |f|
+      begin
+        header = f.read(8)
+        f.seek(-12, IO::SEEK_END)
+        footer = f.read(12)
+      rescue
+        return nil
+      end
+
+      if header[0, 2].unpack('H*') == %w(ffd8) && footer[-2, 2].unpack('H*') == %w(ffd9)
+        return '.jpg'
+      elsif header[0, 3].unpack('A*') == %w(GIF) && footer[-1, 1].unpack('H*') == %w(3b)
+        return '.gif'
+      elsif header[0, 8].unpack('H*') == %w(89504e470d0a1a0a) && footer[-12,12].unpack('H*') == %w(0000000049454e44ae426082)
+        return '.png'
+      end
+    end
+    nil
+  end
+
   # From http://d.hatena.ne.jp/gan2/20080531/1212227507
   def save_file(url, filename)
     Thread.new(url) { |url|
@@ -28,6 +50,18 @@ Plugin.create(:pictcollect) do
         open(filename, 'wb') do |file|
           open(url) do |data|
             file.write(data.read)
+          end
+        end
+        # 拡張子を含まない場合は調べて付加する
+        if (File.extname(filename) !~ /\.(jpg|jpeg|png|gif|mp4)$/ )
+          old = filename
+          filename += image_type(filename)
+          if File.exist?(filename)
+            File.delete(old)
+            activity :pictcollect, "もうある #{filename}"
+            return
+          else
+            File.rename(old, filename)
           end
         end
         activity :pictcollect, "ほぞんした！！ #{url} --> #{filename}"
