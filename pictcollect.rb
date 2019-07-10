@@ -125,6 +125,13 @@ Plugin.create(:pictcollect) do
         saveurl = (old) ? photo.uri.to_s+":orig" : photo[:original].uri.to_s
         filename = [message[:user][:idname], message[:id].to_s, count].join("_") + File.extname(url)
         username = message[:user][:idname]
+      when :mastodon_status
+        saveurl = photo[:original].uri.to_s
+        ext = File.extname(url)
+        ext = (ext.include?("?")) ? ext.split("?")[0] : ext
+        filename = [message[:account][:acct], message[:id].to_s, count].join("_") + ext
+        username = message[:account][:acct]
+        savedir_world = "!mastodon/"
       when :worldon_status
         saveurl = photo[:original].uri.to_s
         ext = File.extname(url)
