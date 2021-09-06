@@ -147,7 +147,7 @@ Plugin.create(:pictcollect) do
       if filename
         savedir_usr = ""
         # ユーザーごとにディレクトリを掘る場合
-        if (:collect_mkdir_by_account)
+        if UserConfig[:collect_mkdir_by_account]
           savedir_usr = savedir_world + username + "/"
           if (! Dir.exist?(savedir + savedir_usr))
             FileUtils.mkdir_p(savedir + savedir_usr)
