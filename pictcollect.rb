@@ -49,7 +49,7 @@ Plugin.create(:pictcollect) do
         activity :pictcollect, "もうある #{filename}"
       else
         open(filename, 'wb') do |file|
-          open(url) do |data|
+          URI.open(url) do |data|
             file.write(data.read)
           end
         end
