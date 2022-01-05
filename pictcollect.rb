@@ -83,13 +83,11 @@ Plugin.create(:pictcollect) do
   end
 
   def pictcollect(message, savedir)
-    # ツイートに含まれる画像のURLを取得
-    urls = Plugin[:"pictcollect"].score_of(message).map{|url| url.uri }
-
     count = 1
     md5 = []
-    urls.map{ |url|
-      Plugin.filtering(:openimg_raw_image_from_display_url, url.to_s, nil)
+    # ツイートに含まれる画像のURLを取得
+    Plugin[:"pictcollect"].score_of(message).map{ |url|
+      Plugin.filtering(:openimg_raw_image_from_display_url, url.uri.to_s, nil)
     }.select{ |pair| pair.last }.map(&:first).each{ |url|
       savedir_world = ""
       username = ""
@@ -97,21 +95,14 @@ Plugin.create(:pictcollect) do
       case message.class.slug
       when :twitter_tweet
         saveurl = photo[:original].uri.to_s
-        filename = [message[:user][:idname], message[:id].to_s, count].join("_") + File.extname(url)
         username = message[:user][:idname]
-      when :mastodon_status
+        filename = [username, message[:id].to_s, count].join("_") + File.extname(url)
+      when :mastodon_status, :worldon_status
         saveurl = photo[:original].uri.to_s
         ext = File.extname(url)
         ext = (ext.include?("?")) ? ext.split("?")[0] : ext
-        filename = [message[:account][:acct], message[:id].to_s, count].join("_") + ext
         username = message[:account][:acct]
-        savedir_world = "!mastodon/"
-      when :worldon_status
-        saveurl = photo[:original].uri.to_s
-        ext = File.extname(url)
-        ext = (ext.include?("?")) ? ext.split("?")[0] : ext
-        filename = [message[:account][:acct], message[:id].to_s, count].join("_") + ext
-        username = message[:account][:acct]
+        filename = [username, message[:id].to_s, count].join("_") + ext
         savedir_world = "!mastodon/"
       else
         activity :pictcollect, "未対応のWorldです"
