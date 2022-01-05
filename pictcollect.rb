@@ -27,7 +27,7 @@ Plugin.create(:pictcollect) do
         f.seek(-12, IO::SEEK_END)
         footer = f.read(12)
       rescue
-        return nil
+        return ''
       end
 
       if header[0, 2].unpack('H*') == %w(ffd8) && footer[-2, 2].unpack('H*') == %w(ffd9)
@@ -38,7 +38,7 @@ Plugin.create(:pictcollect) do
         return '.png'
       end
     end
-    nil
+    return ''
   end
 
   # From http://d.hatena.ne.jp/gan2/20080531/1212227507
@@ -47,6 +47,7 @@ Plugin.create(:pictcollect) do
       saved = nil
       if File.exist?(filename)
         activity :pictcollect, "もうある #{filename}"
+        saved = 2
       else
         open(filename, 'wb') do |file|
           URI.open(url) do |data|
@@ -57,26 +58,34 @@ Plugin.create(:pictcollect) do
         # 拡張子を含まない場合は調べて付加する
         if (File.extname(filename) !~ /\.(jpg|jpeg|png|gif|mp4)$/ )
           old = filename
-          filename += image_type(filename)
-          if File.exist?(filename)
-            File.delete(old)
-            activity :pictcollect, "もうある #{filename}"
-            saved = nil
+          ext = image_type(filename)
+          if ext != ""
+            filename += ext
+            if File.exist?(filename)
+              File.delete(old)
+              activity :pictcollect, "もうある #{filename}"
+            else
+              File.rename(old, filename)
+            end
           else
-            File.rename(old, filename)
+            File.delete(filename)
+            activity :pictcollect, "ほぞんできないURL #{url}"
+            saved = nil
           end
         end
       end
-      # check duplicate file
-      m = Digest::MD5.file(filename)
-      if (md5.include?(m))
-        File.delete(filename)
-        "duplicated"
-      else
-        if saved
-          activity :pictcollect, "ほぞんした！！ #{url} --> #{filename}"
+      if saved
+        # check duplicate file
+        m = Digest::MD5.file(filename)
+        if (md5.include?(m))
+          File.delete(filename)
+          "duplicated"
+        else
+          if saved == 1
+            activity :pictcollect, "ほぞんした！！ #{url} --> #{filename}"
+          end
+          m
         end
-        m
       end
     }
     return ret.value
