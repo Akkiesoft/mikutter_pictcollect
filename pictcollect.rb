@@ -89,28 +89,12 @@ Plugin.create(:pictcollect) do
       "g" => "gif"
     }
     # ツイートに含まれる画像のURLを取得
-    old = false
-    if (Plugin.instance_exist?(:score))
-      # 3.7以降
-      urls = Plugin[:"pictcollect"].score_of(message).map{|url|
-        # フォトライフ記法は画像URLに変換してやる(Worldは問わないことにした)
-        if url.description =~ %r{f:id:([-_a-zA-Z0-9]+):([0-9]{8})([0-9]{6})(j|g|p|f)?(:image|:movie)?}
-          "https://cdn-ak.f.st-hatena.com/images/fotolife/#{$~[1][0]}/#{$~[1]}/#{$~[2]}/#{$~[2]}#{$~[3]}.#{ext[$~[4]]}"
-        else url.uri end
-      }
-    else
-      # 3.6
-      old = true
-      urls = message.entity.select{ |entity|
-        %i<urls media hatenafotolife>.include? entity[:slug]
-      }.map{ |url|
-        if url[:slug] == :media
-          url[:media_url]
-        else
-          url[:expanded_url]
-        end
-      }
-    end
+    urls = Plugin[:"pictcollect"].score_of(message).map{|url|
+      # フォトライフ記法は画像URLに変換してやる(Worldは問わないことにした)
+      if url.description =~ %r{f:id:([-_a-zA-Z0-9]+):([0-9]{8})([0-9]{6})(j|g|p|f)?(:image|:movie)?}
+        "https://cdn-ak.f.st-hatena.com/images/fotolife/#{$~[1][0]}/#{$~[1]}/#{$~[2]}/#{$~[2]}#{$~[3]}.#{ext[$~[4]]}"
+      else url.uri end
+    }
 
     count = 1
     md5 = []
@@ -122,7 +106,7 @@ Plugin.create(:pictcollect) do
       photo = Enumerator.new{ |y| Plugin.filtering(:photo_filter, url, y) }.first
       case message.class.slug
       when :twitter_tweet
-        saveurl = (old) ? photo.uri.to_s+":orig" : photo[:original].uri.to_s
+        saveurl = photo[:original].uri.to_s
         filename = [message[:user][:idname], message[:id].to_s, count].join("_") + File.extname(url)
         username = message[:user][:idname]
       when :mastodon_status
