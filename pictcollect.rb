@@ -49,9 +49,14 @@ Plugin.create(:pictcollect) do
         activity :pictcollect, "もうある #{filename}"
         saved = 2
       else
-        open(filename, 'wb') do |file|
-          URI.open(url) do |data|
-            file.write(data.read)
+        begin
+          open(filename, 'wb') do |file|
+            URI.open(url) do |data|
+              file.write(data.read)
+            end
+        rescue OpenURI::HTTPError => e
+            activity :pictcollect, "ほぞんできないURL #{url} (#e)"
+            saved = nil
           end
         end
         saved = 1
