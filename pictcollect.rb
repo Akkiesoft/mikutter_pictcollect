@@ -172,8 +172,8 @@ Plugin.create(:pictcollect) do
     savedir = get_savedir()
     next unless (savedir)
 
-    urls = Plugin[:gtk].widgetof(opt.widget).widget_post.buffer.text
-    Plugin[:gtk].widgetof(opt.widget).widget_post.buffer.text = ""
+    urls = Plugin[:gtk3].widgetof(opt.widget).widget_post.buffer.text
+    Plugin[:gtk3].widgetof(opt.widget).widget_post.buffer.text = ""
     urls.each_line(chomp: true) { |url|
       # 金具さんのshow_tweetをパクった
       # https://github.com/cobodo/show_tweet/blob/req/any-model/show_tweet.rb
