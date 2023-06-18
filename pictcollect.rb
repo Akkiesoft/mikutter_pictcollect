@@ -125,13 +125,17 @@ Plugin.create(:pictcollect) do
       end
 
       if filename
-        savedir_usr = ""
+        savedir_usr = savedir_world
         # ユーザーごとにディレクトリを掘る場合
+        if UserConfig[:collect_mkdir_by_initial]
+          initial = username[0].upcase
+          savedir_usr += initial + "/"
+        end
         if UserConfig[:collect_mkdir_by_account]
-          savedir_usr = savedir_world + username + "/"
-          if (! Dir.exist?(savedir + savedir_usr))
-            FileUtils.mkdir_p(savedir + savedir_usr)
-          end
+          savedir_usr += username + "/"
+        end
+        if (! Dir.exist?(savedir + savedir_usr))
+          FileUtils.mkdir_p(savedir + savedir_usr)
         end
         count += 1
         savepath = savedir + savedir_usr + filename
@@ -199,6 +203,7 @@ Plugin.create(:pictcollect) do
   settings "画像これくしょん" do
     input("画像を保存するディレクトリ", :collect_savedir)
     boolean('アカウントごとにディレクトリを作成', :collect_mkdir_by_account)
+    boolean('アカウントの頭文字ごとにディレクトリを作成', :collect_mkdir_by_initial)
   end
 
 end
