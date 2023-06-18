@@ -111,13 +111,14 @@ Plugin.create(:pictcollect) do
         saveurl = photo[:original].uri.to_s
         username = message[:user][:idname]
         filename = [username, message[:id].to_s, count].join("_") + File.extname(url)
+        savedir_world = "twitter/"
       when :mastodon_status, :worldon_status
         saveurl = photo[:original].uri.to_s
         ext = File.extname(url)
         ext = (ext.include?("?")) ? ext.split("?")[0] : ext
         username = message[:account][:acct]
         filename = [username, message[:id].to_s, count].join("_") + ext
-        savedir_world = "!mastodon/"
+        savedir_world = "mastodon/"
       else
         activity :pictcollect, "未対応のWorldです"
         return
