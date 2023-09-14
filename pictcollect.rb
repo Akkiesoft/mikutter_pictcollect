@@ -23,7 +23,7 @@ Plugin.create(:pictcollect) do
   def image_type(file_path)
     File.open(file_path, 'rb') do |f|
       begin
-        header = f.read(8)
+        header = f.read(12)
         f.seek(-12, IO::SEEK_END)
         footer = f.read(12)
       rescue
@@ -36,6 +36,8 @@ Plugin.create(:pictcollect) do
         return '.gif'
       elsif header[0, 8].unpack('H*') == %w(89504e470d0a1a0a) && footer[-12,12].unpack('H*') == %w(0000000049454e44ae426082)
         return '.png'
+      elsif header[0, 12].unpack('A8A4')[1] == "WEBP"
+        return '.webp'
       end
     end
     return ''
