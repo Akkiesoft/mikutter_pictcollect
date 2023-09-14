@@ -63,7 +63,7 @@ Plugin.create(:pictcollect) do
         end
         saved = 1
         # 拡張子を含まない場合は調べて付加する
-        if (File.extname(filename) !~ /\.(jpg|jpeg|png|gif|mp4)$/ )
+        if (File.extname(filename) !~ /\.(jpg|jpeg|png|webp|gif|mp4)$/ )
           old = filename
           ext = image_type(filename)
           if ext != ""
